@@ -133,3 +133,15 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+// TESTING
+// void
+// backtrace(void)
+// {
+//   uint64 fp = r_fp();
+//   while (fp != PGROUNDUP(fp)) // if the bottom of the stack has been reached
+//   {
+//     /* code */
+//   }
+  
+// }
