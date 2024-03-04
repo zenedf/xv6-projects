@@ -99,13 +99,18 @@ sys_uptime(void)
 uint64
 sys_sigreturn(void)
 {
-  return 0;
+  return sigreturn();
 }
 
 // new
 uint64
 sys_sigalarm(void)
 {
-  return 0;
+  int n;
+  uint64 fn;
+  argint(0, &n);
+  argaddr(1, &fn);
+
+  return sigalarm(n, (void(*)())(fn));
 }
 

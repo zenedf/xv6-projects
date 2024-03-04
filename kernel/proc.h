@@ -106,6 +106,9 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   // alarm-related fields
-  int alarmInterval; // alarm interval (0 for disabled)
-  void(*alarmHandler)();
+  int alarmInterval;     // alarm interval (0 for disabled).
+  void(*alarmHandler)(); // alarm handler.
+  int alarmTicks;        // number of ticks before the next alarm goes off.
+  int alarmIsGoingOff;   // is an alarm currently going off and hasn't returned yet? (this prevents re-entrance of the alarmHandler).
+  struct trapframe *alarmTrapframe; // copy of the trapframe right before running alarmHandler.
 };

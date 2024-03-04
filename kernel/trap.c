@@ -76,6 +76,10 @@ usertrap(void)
   if(killed(p))
     exit(-1);
 
+  //new
+  if(p->killed)
+    exit(-1);
+
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
     yield();
@@ -219,3 +223,27 @@ devintr()
   }
 }
 
+// new
+// Restore the trapframe to the state before
+//  the clock interrupt and restore the program
+//  flow that was originally executing.
+int
+sigreturn()
+{
+  struct proc *p = myproc();
+  *p->trapframe = *p->alarmTrapframe;
+  p->alarmIsGoingOff = 0;
+  return 0;
+}
+
+// new
+// set related properties in myproc
+int
+sigalarm(int ticks, void(*handler)())
+{
+  struct proc *p = myproc();
+  p->alarmHandler  = handler;
+  p->alarmInterval = ticks;
+  p->alarmTicks    = ticks;
+  return 0;
+}

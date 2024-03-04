@@ -132,6 +132,18 @@ found:
     return 0;
   }
 
+  // new
+  // Allocate a trapframe page for alarmTrapframe.
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+  p->alarmTicks      = 0;
+  p->alarmHandler    = 0;
+  p->alarmInterval   = 0;
+  p->alarmIsGoingOff = 0;
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -158,6 +170,12 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+
+  // new
+  if(p->alarmTrapframe)
+    kfree((void*)p->alarmTrapframe);
+  p->alarmTrapframe = 0;
+
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
@@ -168,6 +186,11 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+  //new
+  p->alarmTicks = 0;
+  p->alarmHandler = 0;
+  p->alarmInterval = 0;
+  p->alarmIsGoingOff = 0;
   p->state = UNUSED;
 }
 
