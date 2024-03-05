@@ -83,6 +83,60 @@ usertrap(void)
   usertrapret();
 }
 
+/*
+
+void
+usertrap(void)
+{
+  int which_dev = 0;
+
+  if((r_sstatus() & SSTATUS_SPP) != 0)
+    panic("usertrap: not from user mode");
+
+  // send interrupts and exceptions to kerneltrap(),
+  // since we're now in the kernel.
+  w_stvec((uint64)kernelvec);
+
+  struct proc *p = myproc();
+
+  // save user program counter.
+  p->trapframe->epc = r_sepc();
+
+  if(r_scause() == 8){
+    // system call
+
+    if(killed(p))
+      exit(-1);
+
+    // sepc points to the ecall instruction,
+    // but we want to return to the next instruction.
+    p->trapframe->epc += 4;
+
+    // an interrupt will change sepc, scause, and sstatus,
+    // so enable only now that we're done with those registers.
+    intr_on();
+
+    syscall();
+  } else if((which_dev = devintr()) != 0){
+    // ok
+  } else if(r_scause() == 13 || r_scause() == 15){ // page fault
+    stval = r_stval();
+    if((pte = walk(p->pagetable, stval, 0)) == 0)
+      panic("uvmcopy: pte should exist");
+    if((*pte & PTE_RSW) == 0) // Not a COW page
+      goto not_cow;
+    if((*pte & PTE_W) != 0) // Page is writable
+      goto not_cow;
+    flags = PTE_FLAGS(*pte) | PTE_W; // Set the PTE_W bit
+    if((mem = kalloc()) == 0)
+      panic("out of memory");
+    memmove(mem, (char*)PTE2PA(*pte), PGSIZE);
+    if(mappages(p->pagetable, PGROUNDDOWN(stval), PGSIZE, (uint64)mem, flags) != 0)
+      panic("mappages");
+    return;
+
+*/
+
 //
 // return to user space
 //
