@@ -191,7 +191,7 @@ freeproc(struct proc *p)
   p->alarmHandler = 0;
   p->alarmInterval = 0;
   p->alarmIsGoingOff = 0;
-  p->state = UNUSED;
+  // p->state = UNUSED;
 }
 
 // Create a user page table for a given process, with no user memory,

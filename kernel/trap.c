@@ -81,9 +81,30 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
-    yield();
+  // if(which_dev == 2)
+  //   yield();
 
+  // new
+  // give up the CPU if this is a timer interrupt.
+  if (which_dev == 2)
+  {
+    if (p->alarmInterval !=0) // If a clock event is set.
+    {
+      if (--p->alarmTicks <= 0) // Clock countdown -1 tick if the set number of ticks has been reached or exceeded.
+      {
+        if (!p->alarmIsGoingOff) // Make sure no clocks are running.
+        {
+          p->alarmTicks = p->alarmInterval;
+          // jump to execute alarmHandler.
+          *p->alarmTrapframe = *p->trapframe; // backup trapframe
+          p->trapframe->epc = (uint64)p->alarmHandler;
+          p->alarmIsGoingOff = 1;
+        }
+        // If a clock processing function is already running when a clock expires, the clock will not be triggered until the next tick after the original processing function completes. 
+      }
+    }
+    yield();
+  }
   usertrapret();
 }
 
