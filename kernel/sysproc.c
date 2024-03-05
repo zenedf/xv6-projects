@@ -99,7 +99,7 @@ sys_uptime(void)
 uint64
 sys_sigreturn(void)
 {
-  return sigreturn();
+  return sys_sigreturn();
 }
 
 // new
@@ -111,6 +111,11 @@ sys_sigalarm(void)
   argint(0, &n);
   argaddr(1, &fn);
 
-  return sigalarm(n, (void(*)())(fn));
+  // return sigalarm(n, (void(*)())(fn));
+  struct proc *p = myproc();
+  p->alarmHandler  = (void(*)())fn;
+  p->alarmInterval = ticks;
+  p->alarmTicks    = ticks;
+  return 0;
 }
 

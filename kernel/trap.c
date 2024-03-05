@@ -227,23 +227,23 @@ devintr()
 // Restore the trapframe to the state before
 //  the clock interrupt and restore the program
 //  flow that was originally executing.
-int
-sigreturn()
-{
-  struct proc *p = myproc();
-  *p->trapframe = *p->alarmTrapframe;
-  p->alarmIsGoingOff = 0;
-  return 0;
-}
+// int
+// sigreturn()
+// {
+//   struct proc *p = myproc();
+//   *p->trapframe = *p->alarmTrapframe;
+//   p->alarmIsGoingOff = 0;
+//   return 0;
+// }
 
-// new
-// set related properties in myproc
-int
-sigalarm(int ticks, void(*handler)())
-{
-  struct proc *p = myproc();
-  p->alarmHandler  = handler;
-  p->alarmInterval = ticks;
-  p->alarmTicks    = ticks;
-  return 0;
-}
+// // new
+// // set related properties in myproc
+// int
+// sigalarm(int ticks, void(*handler)())
+// {
+//   struct proc *p = myproc();
+//   p->alarmHandler  = handler;
+//   p->alarmInterval = ticks;
+//   p->alarmTicks    = ticks;
+//   return 0;
+// }
