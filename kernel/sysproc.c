@@ -99,9 +99,8 @@ sys_uptime(void)
 uint64
 sys_sigreturn(void)
 {
-  // return sys_sigreturn();
   struct proc *p = myproc();
-  *p->trapframe = *p->alarmTrapframe;
+  *p->trapframe = *p->alarmTrapframe; // restore registers.
   p->alarmIsGoingOff = 0;
   return p->trapframe->a0; // sigreturn is a system call, and its return value is stored in a0.
 }
@@ -111,13 +110,12 @@ uint64
 sys_sigalarm(void)
 {
   int interval;
-  uint64 fn;
+  uint64 handler;
   argint(0, &interval);
-  argaddr(1, &fn);
+  argaddr(1, &handler);
 
-  // return sigalarm(n, (void(*)())(fn));
   struct proc *p = myproc();
-  p->alarmHandler  = (void(*)())fn;
+  p->alarmHandler  = (void(*)())handler;
   p->alarmInterval = interval;
   p->alarmTicks    = ticks;
   return 0;
