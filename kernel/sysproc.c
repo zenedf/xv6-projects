@@ -106,9 +106,9 @@ sys_sigalarm(void){
 	argint(0, &interval);
 	argaddr(1, &handler);
 
-	p->alarm_handler = (void(*)())handler;
+	p->alarm_handler = handler;
   p->alarm_interval = interval;
-  p->alarm_ticks = ticks;
+  p->alarm_ticks = interval;
 
   return 0;
 }

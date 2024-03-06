@@ -88,7 +88,7 @@ usertrap(void)
 			{
 				p->alarm_ticks = p->alarm_interval;
 				// Store the current trapframe from user space before executing the alert handler
-        *p->alarm_trapframe = *p->trapframe;
+        memmove(p->alarm_trapframe, p->trapframe, PGSIZE);
 				p->trapframe->epc = (uint64)p->alarm_handler;
 				p->alarm_active = 1;
 			}

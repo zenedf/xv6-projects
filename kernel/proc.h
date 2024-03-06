@@ -105,9 +105,8 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   int alarm_interval;	       // The amount of ticks
-  void(*alarm_handler)();	       // Pointer to the alarm handler
+  uint64 alarm_handler;	       // Pointer to the alarm handler
   int alarm_ticks;	       // Number of ticks since last call
   int alarm_active;	       // Is an alarm active
-  struct trapframe *alarm_trapframe;    // Trap frame for continuing from the alarm handler
-       
+  struct trapframe *alarm_trapframe;    // Trap frame for continuing from the alarm handler 
 };
