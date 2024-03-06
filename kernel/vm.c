@@ -302,6 +302,9 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // physical memory.
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
+
+
+
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
@@ -337,27 +340,31 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
-  pte_t *pte;
-  uint64 pa, i;
-  uint flags;
+    pte_t *pte; //
+    uint64 pa, i;
+    uint flags;
+    char *mem;
 
-  for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
-    pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte) & ~PTE_W; // Clear the PTE_W bit
-    if(mappages(new, i, PGSIZE, pa, flags) != 0) // Map the parent's physical pages into the child
-      goto err;
-    *pte &= ~PTE_W; // Clear the PTE_W bit in the parent's PTE
-    *pte |= PTE_RSW; // Set the RSW bit to indicate this is a COW page
-  }
-  return 0;
+    for(i = 0; i < sz; i += PGSIZE){
+        if((pte = walk(old, i, 0)) == 0)
+            panic("uvmcopy: pte should exist");
+        if((*pte & PTE_V) == 0)
+            panic("uvmcopy: page not present");
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte) & ~PTE_W; // Clear the PTE_W bit
+        if((mem = kalloc()) == 0)
+            goto err;
+        if(mappages(new, i, PGSIZE, pa, flags) != 0) // Map the parent's physical pages into the child
+            kfree(mem);
+            goto err;
+        *pte &= ~PTE_W; // Clear the PTE_W bit in the parent's PTE
+        *pte |= PTE_COW; // Set the COW bit to indicate this is a COW page
+    }
+    return 0;
 
- err:
-  uvmunmap(new, 0, i / PGSIZE, 1);
-  return -1;
+    err:
+    uvmunmap(new, 0, i / PGSIZE, 1);
+    return -1;
 }
 
 */
@@ -405,32 +412,31 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
-  uint64 n, va0, pa0;
+    uint64 n, va0, pa0;
 
-  while(len > 0){
-    va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    if(PTE_FLAGS(pagetable[PTE_IDX(va0)]) & PTE_COW){
-      // Handle COW page: duplicate page and update PTE
-      char *newpage = kalloc();
-      memmove(newpage, (char*)PTE2PA(pa0), PGSIZE);
-      pagetable[PTE_IDX(va0)] = PA2PTE(newpage) | PTE_FLAGS(pagetable[PTE_IDX(va0)]) & ~PTE_COW;
-      pa0 = (uint64)newpage;
+    while(len > 0){
+        va0 = PGROUNDDOWN(dstva);
+        pa0 = walkaddr(pagetable, va0);
+        if(pa0 == 0)
+            return -1;
+        if(PTE_FLAGS(pagetable[PTE_IDX(va0)]) & PTE_COW){
+            // Handle COW page: duplicate page and update PTE
+            char *newpage = kalloc();
+            memmove(newpage, (char*)PTE2PA(pa0), PGSIZE);
+            pagetable[PTE_IDX(va0)] = PA2PTE(newpage) | (PTE_FLAGS(pagetable[PTE_IDX(va0)]) & ~PTE_COW);
+            pa0 = (uint64)newpage;
+        }
+        n = PGSIZE - (dstva - va0);
+        if(n > len)
+            n = len;
+        memmove((void *)(pa0 + (dstva - va0)), src, n);
+
+        len -= n;
+        src += n;
+        dstva = va0 + PGSIZE;
     }
-    n = PGSIZE - (dstva - va0);
-    if(n > len)
-      n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
-
-    len -= n;
-    src += n;
-    dstva = va0 + PGSIZE;
-  }
-  return 0;
+    return 0;
 }
-
 
 */
 

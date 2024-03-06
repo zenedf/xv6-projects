@@ -33,6 +33,8 @@ trapinithart(void)
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
 //
+
+
 void
 usertrap(void)
 {
@@ -85,57 +87,81 @@ usertrap(void)
 
 /*
 
+#define PTE_IDX(va) ((va) >> 12 & 0x1ff)
+#define PTE_COW (1L << 8)  // Use the RSW bit to mark COW pages
+
 void
 usertrap(void)
 {
-  int which_dev = 0;
+    int which_dev = 0;
 
-  if((r_sstatus() & SSTATUS_SPP) != 0)
-    panic("usertrap: not from user mode");
+    if((r_sstatus() & SSTATUS_SPP) != 0)
+        panic("usertrap: not from user mode");
 
-  // send interrupts and exceptions to kerneltrap(),
-  // since we're now in the kernel.
-  w_stvec((uint64)kernelvec);
+    // send interrupts and exceptions to kerneltrap(),
+    w_stvec((uint64)kernelvec);
 
-  struct proc *p = myproc();
+    struct proc *p = myproc();
 
-  // save user program counter.
-  p->trapframe->epc = r_sepc();
+    // save user program counter.
+    p->trapframe->epc = r_sepc();
 
-  if(r_scause() == 8){
-    // system call
+    if(r_scause() == 8){
+        // system call
+        if(killed(p))
+            exit(-1);
+
+        // sepc points to the ecall instruction,
+        // but we want to return to the next instruction.
+        p->trapframe->epc += 4;
+
+        // an interrupt will change sepc, scause, and sstatus,
+        // so enable only now that we're done with those registers.
+        intr_on();
+
+        syscall();
+    } else if((which_dev = devintr()) != 0){
+        // ok
+    } else {
+        // Handle page faults for COW pages
+        uint64 va = r_stval();
+        pte_t *pte;
+        if((pte = walk(p->pagetable, va, 0)) != 0 && (*pte & PTE_COW) && ((*pte & PTE_V) && (*pte & PTE_U) == 0)) {
+            // Allocate a new page frame
+            char *mem = kalloc();
+            if(mem == 0) {
+                // Out of memory, kill the process
+                printf("usertrap: out of memory\n");
+                setkilled(p);
+            } else {
+                // Copy the old page to the new page
+                memmove(mem, (char*)PTE2PA(*pte), PGSIZE);
+                // Update the PTE to point to the new page
+                *pte = PA2PTE(mem) | PTE_FLAGS(*pte) | PTE_W;
+                *pte &= ~PTE_COW;
+            }
+        } else if((*pte & PTE_V) && (*pte & PTE_U) == 0) {
+            // Page is not writable for user, kill the process
+            printf("usertrap: not writable\n");
+            setkilled(p);
+        } else {
+            printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+            printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+            setkilled(p);
+        }
+    }
 
     if(killed(p))
-      exit(-1);
+        exit(-1);
 
-    // sepc points to the ecall instruction,
-    // but we want to return to the next instruction.
-    p->trapframe->epc += 4;
+    // give up the CPU if this is a timer interrupt.
+    if(which_dev == 2)
+        yield();
 
-    // an interrupt will change sepc, scause, and sstatus,
-    // so enable only now that we're done with those registers.
-    intr_on();
+    usertrapret();
+}
 
-    syscall();
-  } else if((which_dev = devintr()) != 0){
-    // ok
-  } else if(r_scause() == 13 || r_scause() == 15){ // page fault
-    stval = r_stval();
-    if((pte = walk(p->pagetable, stval, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_RSW) == 0) // Not a COW page
-      goto not_cow;
-    if((*pte & PTE_W) != 0) // Page is writable
-      goto not_cow;
-    flags = PTE_FLAGS(*pte) | PTE_W; // Set the PTE_W bit
-    if((mem = kalloc()) == 0)
-      panic("out of memory");
-    memmove(mem, (char*)PTE2PA(*pte), PGSIZE);
-    if(mappages(p->pagetable, PGROUNDDOWN(stval), PGSIZE, (uint64)mem, flags) != 0)
-      panic("mappages");
-    return;
-
-*/
+ */
 
 //
 // return to user space
