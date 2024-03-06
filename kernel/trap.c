@@ -9,6 +9,9 @@
 struct spinlock tickslock;
 uint ticks;
 
+//uint64 handler;
+//int alarm_ticks;
+
 extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
@@ -78,8 +81,20 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+	{
+	  if(p->alarm_interval != 0 && !p->alarm_active)
+		{
+			if(--p->alarm_ticks <= 0)
+			{
+				p->alarm_ticks = p->alarm_interval;
+				// Store the current trapframe from user space before executing the alert handler
+        *p->alarm_trapframe = *p->trapframe;
+				p->trapframe->epc = (uint64)p->alarm_handler;
+				p->alarm_active = 1;
+			}
+	  }
     yield();
-
+	}
   usertrapret();
 }
 
@@ -218,4 +233,3 @@ devintr()
     return 0;
   }
 }
-
